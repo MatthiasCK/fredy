@@ -2,6 +2,7 @@ node_modules/
 ui/public/
 db/*.json
 db/*.db*
+db/media/
 npm-debug.log
 .DS_Store
 .idea
