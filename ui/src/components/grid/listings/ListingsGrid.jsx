@@ -31,6 +31,8 @@ import {
   IconStarStroked,
   IconSearch,
   IconFilter,
+  IconHistory,
+  IconInfoCircle,
 } from '@douyinfe/semi-icons';
 import no_image from '../../../assets/no_image.jpg';
 import * as timeService from '../../../services/time/timeService.js';
@@ -40,6 +42,7 @@ import debounce from 'lodash/debounce';
 
 import './ListingsGrid.less';
 import { IllustrationNoResult, IllustrationNoResultDark } from '@douyinfe/semi-illustrations';
+import ListingDetailModal from '../../listings/ListingDetailModal.jsx';
 
 const { Text } = Typography;
 
@@ -60,6 +63,18 @@ const ListingsGrid = () => {
   const [activityFilter, setActivityFilter] = useState(null);
   const [providerFilter, setProviderFilter] = useState(null);
   const [showFilterBar, setShowFilterBar] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedListingId, setSelectedListingId] = useState(null);
+
+  const handleOpenDetail = (listingId) => {
+    setSelectedListingId(listingId);
+    setDetailModalVisible(true);
+  };
+
+  const handleCloseDetail = () => {
+    setDetailModalVisible(false);
+    setSelectedListingId(null);
+  };
 
   const loadData = () => {
     actions.listingsData.getListingsData({
@@ -274,32 +289,47 @@ const ListingsGrid = () => {
                   </Text>
                 </Space>
                 <Divider margin=".6rem" />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Button
-                    title="Link to listing"
-                    type="primary"
-                    size="small"
-                    onClick={async () => {
-                      window.open(item.link);
-                    }}
-                    icon={<IconLink />}
-                  />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space>
+                    <Button
+                      title="Link to listing"
+                      type="primary"
+                      size="small"
+                      onClick={async () => {
+                        window.open(item.link);
+                      }}
+                      icon={<IconLink />}
+                    />
+                    <Button
+                      title="View Details"
+                      size="small"
+                      onClick={() => handleOpenDetail(item.id)}
+                      icon={<IconInfoCircle />}
+                    />
+                  </Space>
 
-                  <Button
-                    title="Remove"
-                    type="danger"
-                    size="small"
-                    onClick={async () => {
-                      try {
-                        await xhrDelete('/api/listings/', { ids: [item.id] });
-                        Toast.success('Listing(s) successfully removed');
-                        loadData();
-                      } catch (error) {
-                        Toast.error(error);
-                      }
-                    }}
-                    icon={<IconDelete />}
-                  />
+                  <Space>
+                    {item.previous_version_id && (
+                      <Popover content="This listing has price history" style={{ padding: '.5rem' }}>
+                        <IconHistory style={{ color: 'var(--semi-color-warning)' }} />
+                      </Popover>
+                    )}
+                    <Button
+                      title="Remove"
+                      type="danger"
+                      size="small"
+                      onClick={async () => {
+                        try {
+                          await xhrDelete('/api/listings/', { ids: [item.id] });
+                          Toast.success('Listing(s) successfully removed');
+                          loadData();
+                        } catch (error) {
+                          Toast.error(error);
+                        }
+                      }}
+                      icon={<IconDelete />}
+                    />
+                  </Space>
                 </div>
               </div>
             </Card>
@@ -317,6 +347,8 @@ const ListingsGrid = () => {
           />
         </div>
       )}
+
+      <ListingDetailModal visible={detailModalVisible} listingId={selectedListingId} onClose={handleCloseDetail} />
     </div>
   );
 };
