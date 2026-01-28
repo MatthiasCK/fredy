@@ -42,6 +42,13 @@ const VersionTimeline = ({ versions, currentId }) => {
     return change.toFixed(1);
   };
 
+  const computeDuration = (version) => {
+    const start = version.published_at || version.created_at;
+    const end = version.deactivated_at || (version.is_active === 1 ? Date.now() : null);
+    if (!start || !end) return null;
+    return Math.round((end - start) / 86400000);
+  };
+
   // Sort versions by created_at descending (newest first)
   const sortedVersions = [...versions].sort((a, b) => b.created_at - a.created_at);
 
@@ -52,11 +59,13 @@ const VersionTimeline = ({ versions, currentId }) => {
           const isCurrentVersion = version.id === currentId;
           const previousVersion = sortedVersions[index + 1];
           const priceChange = previousVersion ? getPriceChangePercent(version.price, previousVersion.price) : null;
+          const duration = computeDuration(version);
+          const displayDate = version.published_at || version.created_at;
 
           return (
             <Timeline.Item
               key={version.id}
-              time={timeService.format(version.created_at, false)}
+              time={`listed ${timeService.format(displayDate, false)}`}
               type={isCurrentVersion ? 'ongoing' : 'default'}
               className={isCurrentVersion ? 'versionTimeline__current' : ''}
             >
@@ -78,17 +87,23 @@ const VersionTimeline = ({ versions, currentId }) => {
                         Current
                       </Tag>
                     )}
+                    {version.is_active === 0 && (
+                      <Tag color="red" size="small">
+                        Inactive
+                      </Tag>
+                    )}
                   </Space>
                 </div>
                 <div className="versionTimeline__details">
                   <Text type="tertiary" size="small">
                     {version.size ? `${version.size} m²` : ''}
                     {version.rooms ? ` • ${version.rooms} rooms` : ''}
+                    {duration != null ? ` • ${duration} ${duration === 1 ? 'day' : 'days'} online` : ''}
                   </Text>
                 </div>
                 {version.provider && (
                   <Text type="tertiary" size="small">
-                    via {version.provider}
+                    found via {version.provider} on {timeService.format(version.created_at, false)}
                   </Text>
                 )}
               </div>

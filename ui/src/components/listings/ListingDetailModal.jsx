@@ -29,7 +29,6 @@ const { Title, Text } = Typography;
 const ListingDetailModal = ({ visible, listingId, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [listing, setListing] = useState(null);
-  const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
@@ -39,10 +38,10 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
   useEffect(() => {
     if (visible && listingId) {
       loadListingDetails();
+      loadVersionHistory();
     } else {
       setListing(null);
       setVersions([]);
-      setShowVersions(false);
       setHeroIndex(0);
     }
   }, [visible, listingId]);
@@ -97,16 +96,10 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
   };
 
   const loadVersionHistory = async () => {
-    if (versions.length > 0) {
-      setShowVersions(!showVersions);
-      return;
-    }
-
     setVersionsLoading(true);
     try {
       const response = await xhrGet(`/api/listings/versions/${listingId}`);
       setVersions(response.json?.versions || []);
-      setShowVersions(true);
     } catch (error) {
       console.error('Failed to load version history:', error);
     } finally {
@@ -470,7 +463,13 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
               </Title>
               <Space>
                 <Tag color="blue">{listing.provider}</Tag>
-                {listing.is_active === 0 && <Tag color="red">Inactive</Tag>}
+                {listing.is_active === 0 && (
+                  <Tag color="red">
+                    {listing.deactivated_at
+                      ? `Inactive since ${timeService.format(listing.deactivated_at, false)}`
+                      : 'Inactive'}
+                  </Tag>
+                )}
                 {listing.previous_version_id && (
                   <Tag color="orange" icon={<IconHistory />}>
                     Has History
@@ -490,12 +489,22 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
               <Text type="tertiary" size="small">
                 Provider: {listing.provider}
               </Text>
+              {listing.published_at && (
+                <Text type="tertiary" size="small">
+                  Published: {timeService.format(listing.published_at, false)}
+                </Text>
+              )}
               <Text type="tertiary" size="small">
                 Found: {timeService.format(listing.created_at, false)}
               </Text>
               {listing.job_name && (
                 <Text type="tertiary" size="small">
                   Job: {listing.job_name}
+                </Text>
+              )}
+              {listing.duration_days != null && (
+                <Text type="tertiary" size="small">
+                  Duration: {listing.duration_days} {listing.duration_days === 1 ? 'day' : 'days'}
                 </Text>
               )}
             </Space>
@@ -560,26 +569,28 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
 
             <Divider margin={16} />
 
+            {/* Version History */}
+            {versionsLoading ? (
+              <div style={{ textAlign: 'center', padding: 16 }}>
+                <Spin />
+              </div>
+            ) : (
+              versions.length > 0 && (
+                <div className="listingDetail__versions">
+                  <Text strong>Listing History</Text>
+                  <VersionTimeline versions={versions} currentId={listingId} />
+                </div>
+              )
+            )}
+
+            <Divider margin={16} />
+
             {/* Actions */}
             <div className="listingDetail__actions">
-              <Space>
-                <Button type="primary" icon={<IconLink />} onClick={() => window.open(listing.link, '_blank')}>
-                  View Original
-                </Button>
-                <Button icon={<IconHistory />} onClick={loadVersionHistory} loading={versionsLoading}>
-                  {showVersions ? 'Hide History' : 'Show History'}
-                </Button>
-              </Space>
+              <Button type="primary" icon={<IconLink />} onClick={() => window.open(listing.link, '_blank')}>
+                View Original
+              </Button>
             </div>
-
-            {/* Version History */}
-            {showVersions && versions.length > 0 && (
-              <div className="listingDetail__versions">
-                <Divider margin={16} />
-                <Text strong>Version History</Text>
-                <VersionTimeline versions={versions} currentId={listingId} />
-              </div>
-            )}
           </div>
         </div>
       )}

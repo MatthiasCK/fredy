@@ -56,7 +56,7 @@ const ListingsGrid = () => {
   const [page, setPage] = useState(1);
   const pageSize = 40;
 
-  const [sortField, setSortField] = useState('created_at');
+  const [sortField, setSortField] = useState('published_at');
   const [sortDir, setSortDir] = useState('desc');
   const [freeTextFilter, setFreeTextFilter] = useState(null);
   const [watchListFilter, setWatchListFilter] = useState(null);
@@ -206,7 +206,8 @@ const ListingsGrid = () => {
                   onChange={(val) => setSortField(val)}
                 >
                   <Select.Option value="job_name">Job Name</Select.Option>
-                  <Select.Option value="created_at">Listing Date</Select.Option>
+                  <Select.Option value="published_at">Published Date</Select.Option>
+                  <Select.Option value="created_at">Found Date</Select.Option>
                   <Select.Option value="price">Price</Select.Option>
                   <Select.Option value="provider">Provider</Select.Option>
                 </Select>
@@ -287,7 +288,9 @@ const ListingsGrid = () => {
                     {item.address || 'No address provided'}
                   </Text>
                   <Text type="tertiary" size="small" icon={<IconClock />}>
-                    {timeService.format(item.created_at, false)}
+                    {item.published_at
+                      ? `Published: ${timeService.format(item.published_at, false)}`
+                      : `Found: ${timeService.format(item.created_at, false)}`}
                   </Text>
                   <Text type="tertiary" size="small" icon={<IconBriefcase />}>
                     {item.provider.charAt(0).toUpperCase() + item.provider.slice(1)}
