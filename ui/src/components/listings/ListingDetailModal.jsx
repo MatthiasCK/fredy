@@ -26,6 +26,24 @@ import './ListingDetailModal.less';
 
 const { Title, Text } = Typography;
 
+/**
+ * Format address with district if available from change_set
+ */
+const formatAddress = (listing) => {
+  if (!listing) return 'No address provided';
+
+  // Extract district from change_set
+  const district = listing.change_set?.district || null;
+  const address = listing.address || '';
+
+  // If district exists and is not already part of the address, prepend it
+  if (district && !address.includes(district)) {
+    return `${district}, ${address}`;
+  }
+
+  return address || 'No address provided';
+};
+
 const ListingDetailModal = ({ visible, listingId, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [listing, setListing] = useState(null);
@@ -481,7 +499,7 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
             {/* Address */}
             <div className="listingDetail__address">
               <IconMapPin />
-              <Text>{listing.address || 'No address provided'}</Text>
+              <Text>{formatAddress(listing)}</Text>
             </div>
 
             {/* Meta info */}

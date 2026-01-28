@@ -47,6 +47,31 @@ import ListingDetailModal from '../../listings/ListingDetailModal.jsx';
 
 const { Text } = Typography;
 
+/**
+ * Format address with district if available from change_set
+ */
+const formatAddress = (item) => {
+  // Extract district from change_set
+  let district = null;
+  if (item.change_set) {
+    try {
+      const cs = typeof item.change_set === 'string' ? JSON.parse(item.change_set) : item.change_set;
+      district = cs.district || null;
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  const address = item.address || '';
+
+  // If district exists and is not already part of the address, prepend it
+  if (district && !address.includes(district)) {
+    return `${district}, ${address}`;
+  }
+
+  return address || 'No address provided';
+};
+
 const ListingsGrid = () => {
   const listingsData = useSelector((state) => state.listingsData);
   const providers = useSelector((state) => state.provider);
@@ -285,7 +310,7 @@ const ListingsGrid = () => {
                     ellipsis={{ showTooltip: true }}
                     style={{ width: '100%' }}
                   >
-                    {item.address || 'No address provided'}
+                    {formatAddress(item)}
                   </Text>
                   <Text type="tertiary" size="small" icon={<IconClock />}>
                     {item.published_at
