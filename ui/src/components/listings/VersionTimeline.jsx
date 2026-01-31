@@ -12,7 +12,7 @@ import './VersionTimeline.less';
 
 const { Text } = Typography;
 
-const VersionTimeline = ({ versions, currentId }) => {
+const VersionTimeline = ({ versions, currentId, onVersionClick }) => {
   if (!versions || versions.length === 0) {
     return <Text type="tertiary">No version history available</Text>;
   }
@@ -42,8 +42,19 @@ const VersionTimeline = ({ versions, currentId }) => {
     return change.toFixed(1);
   };
 
-  // Sort versions by created_at descending (newest first)
-  const sortedVersions = [...versions].sort((a, b) => b.created_at - a.created_at);
+  const computeDuration = (version) => {
+    const start = version.published_at || version.created_at;
+    const end = version.deactivated_at || (version.is_active === 1 ? Date.now() : null);
+    if (!start || !end) return null;
+    return Math.round((end - start) / 86400000);
+  };
+
+  // Sort versions by published_at (or created_at as fallback) descending (newest first)
+  const sortedVersions = [...versions].sort((a, b) => {
+    const dateA = a.published_at || a.created_at;
+    const dateB = b.published_at || b.created_at;
+    return dateB - dateA;
+  });
 
   return (
     <div className="versionTimeline">
@@ -52,15 +63,33 @@ const VersionTimeline = ({ versions, currentId }) => {
           const isCurrentVersion = version.id === currentId;
           const previousVersion = sortedVersions[index + 1];
           const priceChange = previousVersion ? getPriceChangePercent(version.price, previousVersion.price) : null;
+          const duration = computeDuration(version);
+          const displayDate = version.published_at || version.created_at;
+
+          const handleClick = () => {
+            if (onVersionClick && !isCurrentVersion) {
+              onVersionClick(version.id);
+            }
+          };
 
           return (
             <Timeline.Item
               key={version.id}
-              time={timeService.format(version.created_at, false)}
+              time={`listed ${timeService.format(displayDate, false)}`}
               type={isCurrentVersion ? 'ongoing' : 'default'}
               className={isCurrentVersion ? 'versionTimeline__current' : ''}
             >
-              <div className="versionTimeline__item">
+              <div
+                className={`versionTimeline__item${!isCurrentVersion && onVersionClick ? ' versionTimeline__item--clickable' : ''}`}
+                onClick={handleClick}
+                role={!isCurrentVersion && onVersionClick ? 'button' : undefined}
+                tabIndex={!isCurrentVersion && onVersionClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleClick();
+                  }
+                }}
+              >
                 <div className="versionTimeline__header">
                   <Space>
                     <Text strong>{formatPrice(version.price)}</Text>
@@ -78,17 +107,28 @@ const VersionTimeline = ({ versions, currentId }) => {
                         Current
                       </Tag>
                     )}
+                    {version.is_active === 0 && (
+                      <Tag color="red" size="small">
+                        Inactive
+                      </Tag>
+                    )}
+                    {!isCurrentVersion && onVersionClick && (
+                      <Tag color="grey" size="small">
+                        Click to view
+                      </Tag>
+                    )}
                   </Space>
                 </div>
                 <div className="versionTimeline__details">
                   <Text type="tertiary" size="small">
                     {version.size ? `${version.size} m²` : ''}
                     {version.rooms ? ` • ${version.rooms} rooms` : ''}
+                    {duration != null ? ` • ${duration} ${duration === 1 ? 'day' : 'days'} online` : ''}
                   </Text>
                 </div>
                 {version.provider && (
                   <Text type="tertiary" size="small">
-                    via {version.provider}
+                    found via {version.provider} on {timeService.format(version.created_at, false)}
                   </Text>
                 )}
               </div>

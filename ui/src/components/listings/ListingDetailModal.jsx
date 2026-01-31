@@ -26,26 +26,57 @@ import './ListingDetailModal.less';
 
 const { Title, Text } = Typography;
 
+/**
+ * Format address with district if available from change_set
+ */
+const formatAddress = (listing) => {
+  if (!listing) return 'No address provided';
+
+  // Extract district from change_set
+  const district = listing.change_set?.district || null;
+  const address = listing.address || '';
+
+  // If district exists and is not already part of the address, prepend it
+  if (district && !address.includes(district)) {
+    return `${district}, ${address}`;
+  }
+
+  return address || 'No address provided';
+};
+
 const ListingDetailModal = ({ visible, listingId, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [listing, setListing] = useState(null);
-  const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const thumbnailRowRef = useRef(null);
 
+  // Track the currently viewed version vs the original listing
+  const [currentViewId, setCurrentViewId] = useState(null);
+  const isViewingHistoricalVersion = currentViewId && currentViewId !== listingId;
+
   useEffect(() => {
     if (visible && listingId) {
-      loadListingDetails();
+      setCurrentViewId(listingId);
+      loadListingDetails(listingId);
+      loadVersionHistory();
     } else {
       setListing(null);
       setVersions([]);
-      setShowVersions(false);
       setHeroIndex(0);
+      setCurrentViewId(null);
     }
   }, [visible, listingId]);
+
+  // Load details when switching to a different version
+  useEffect(() => {
+    if (currentViewId && currentViewId !== listing?.id) {
+      loadListingDetails(currentViewId);
+      setHeroIndex(0);
+    }
+  }, [currentViewId]);
 
   // Keyboard arrow navigation (works in both gallery and fullscreen lightbox)
   useEffect(() => {
@@ -84,10 +115,10 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
     row.scrollBy({ left: direction * 240, behavior: 'smooth' });
   }, []);
 
-  const loadListingDetails = async () => {
+  const loadListingDetails = async (id) => {
     setLoading(true);
     try {
-      const response = await xhrGet(`/api/listings/details/${listingId}`);
+      const response = await xhrGet(`/api/listings/details/${id}`);
       setListing(response.json);
     } catch (error) {
       console.error('Failed to load listing details:', error);
@@ -96,17 +127,19 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
     }
   };
 
-  const loadVersionHistory = async () => {
-    if (versions.length > 0) {
-      setShowVersions(!showVersions);
-      return;
-    }
+  const handleVersionClick = (versionId) => {
+    setCurrentViewId(versionId);
+  };
 
+  const handleBackToLatest = () => {
+    setCurrentViewId(listingId);
+  };
+
+  const loadVersionHistory = async () => {
     setVersionsLoading(true);
     try {
       const response = await xhrGet(`/api/listings/versions/${listingId}`);
       setVersions(response.json?.versions || []);
-      setShowVersions(true);
     } catch (error) {
       console.error('Failed to load version history:', error);
     } finally {
@@ -470,7 +503,13 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
               </Title>
               <Space>
                 <Tag color="blue">{listing.provider}</Tag>
-                {listing.is_active === 0 && <Tag color="red">Inactive</Tag>}
+                {listing.is_active === 0 && (
+                  <Tag color="red">
+                    {listing.deactivated_at
+                      ? `Inactive since ${timeService.format(listing.deactivated_at, false)}`
+                      : 'Inactive'}
+                  </Tag>
+                )}
                 {listing.previous_version_id && (
                   <Tag color="orange" icon={<IconHistory />}>
                     Has History
@@ -482,7 +521,7 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
             {/* Address */}
             <div className="listingDetail__address">
               <IconMapPin />
-              <Text>{listing.address || 'No address provided'}</Text>
+              <Text>{formatAddress(listing)}</Text>
             </div>
 
             {/* Meta info */}
@@ -490,12 +529,22 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
               <Text type="tertiary" size="small">
                 Provider: {listing.provider}
               </Text>
+              {listing.published_at && (
+                <Text type="tertiary" size="small">
+                  Published: {timeService.format(listing.published_at, false)}
+                </Text>
+              )}
               <Text type="tertiary" size="small">
                 Found: {timeService.format(listing.created_at, false)}
               </Text>
               {listing.job_name && (
                 <Text type="tertiary" size="small">
                   Job: {listing.job_name}
+                </Text>
+              )}
+              {listing.duration_days != null && (
+                <Text type="tertiary" size="small">
+                  Duration: {listing.duration_days} {listing.duration_days === 1 ? 'day' : 'days'}
                 </Text>
               )}
             </Space>
@@ -560,26 +609,40 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
 
             <Divider margin={16} />
 
+            {/* Version History */}
+            {versionsLoading ? (
+              <div style={{ textAlign: 'center', padding: 16 }}>
+                <Spin />
+              </div>
+            ) : (
+              versions.length > 0 && (
+                <div className="listingDetail__versions">
+                  <Space style={{ marginBottom: 8 }}>
+                    <Text strong>Listing History</Text>
+                    {isViewingHistoricalVersion && (
+                      <Button size="small" theme="light" onClick={handleBackToLatest}>
+                        Back to Latest Version
+                      </Button>
+                    )}
+                  </Space>
+                  {isViewingHistoricalVersion && (
+                    <div style={{ marginBottom: 12 }}>
+                      <Tag color="orange">Viewing historical version</Tag>
+                    </div>
+                  )}
+                  <VersionTimeline versions={versions} currentId={currentViewId} onVersionClick={handleVersionClick} />
+                </div>
+              )
+            )}
+
+            <Divider margin={16} />
+
             {/* Actions */}
             <div className="listingDetail__actions">
-              <Space>
-                <Button type="primary" icon={<IconLink />} onClick={() => window.open(listing.link, '_blank')}>
-                  View Original
-                </Button>
-                <Button icon={<IconHistory />} onClick={loadVersionHistory} loading={versionsLoading}>
-                  {showVersions ? 'Hide History' : 'Show History'}
-                </Button>
-              </Space>
+              <Button type="primary" icon={<IconLink />} onClick={() => window.open(listing.link, '_blank')}>
+                View Original
+              </Button>
             </div>
-
-            {/* Version History */}
-            {showVersions && versions.length > 0 && (
-              <div className="listingDetail__versions">
-                <Divider margin={16} />
-                <Text strong>Version History</Text>
-                <VersionTimeline versions={versions} currentId={listingId} />
-              </div>
-            )}
           </div>
         </div>
       )}

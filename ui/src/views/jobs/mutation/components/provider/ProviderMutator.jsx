@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 
-import { Banner, Modal, Select, Input } from '@douyinfe/semi-ui';
+import { Banner, Modal, Select, Input, Switch, Typography } from '@douyinfe/semi-ui-19';
 import { transform } from '../../../../../services/transformer/providerTransformer';
 import { useSelector } from '../../../../../services/state/store';
 import { IconLikeHeart } from '@douyinfe/semi-icons';
@@ -36,15 +36,18 @@ export default function ProviderMutator({
   const provider = useSelector((state) => state.provider);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [providerUrl, setProviderUrl] = useState(null);
+  const [fullFetch, setFullFetch] = useState(false);
   const [validationMessage, setValidationMessage] = useState(null);
 
   useEffect(() => {
     if (providerToEdit) {
       setSelectedProvider(returnOriginalSelectedProvider(providerToEdit, provider));
       setProviderUrl(providerToEdit.url);
+      setFullFetch(providerToEdit.fullFetch || false);
     } else {
       setSelectedProvider(null);
       setProviderUrl(null);
+      setFullFetch(false);
     }
   }, [providerToEdit, visible]);
 
@@ -77,6 +80,7 @@ export default function ProviderMutator({
               url: providerUrl,
               id: selectedProvider.id,
               name: selectedProvider.name,
+              fullFetch,
             }),
             oldProviderToEdit: providerToEdit,
           });
@@ -86,11 +90,13 @@ export default function ProviderMutator({
               url: providerUrl,
               id: selectedProvider.id,
               name: selectedProvider.name,
+              fullFetch,
             }),
           );
         }
         setProviderUrl(null);
         setSelectedProvider(null);
+        setFullFetch(false);
         onVisibilityChanged(false);
       } else {
         setValidationMessage(validationResult);
@@ -98,6 +104,7 @@ export default function ProviderMutator({
     } else {
       setProviderUrl(null);
       setSelectedProvider(null);
+      setFullFetch(false);
       onVisibilityChanged(false);
     }
   };
@@ -190,6 +197,21 @@ export default function ProviderMutator({
           setProviderUrl(e.target.value);
         }}
       />
+
+      {selectedProvider?.id === 'immoscout' && (
+        <>
+          <br />
+          <br />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Switch checked={fullFetch} onChange={(checked) => setFullFetch(checked)} />
+            <Typography.Text strong>Full Fetch Mode</Typography.Text>
+          </div>
+          <Typography.Text type="tertiary" size="small">
+            When enabled, Fredy will fetch ALL listings from the search (all pages), ignoring early termination. Use
+            this once to backfill existing listings, then disable for efficient incremental updates.
+          </Typography.Text>
+        </>
+      )}
     </Modal>
   );
 }

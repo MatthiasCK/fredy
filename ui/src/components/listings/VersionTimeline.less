@@ -18,6 +18,24 @@
 
   &__item {
     padding: 4px 0;
+
+    &--clickable {
+      cursor: pointer;
+      padding: 8px 12px;
+      margin-left: -12px;
+      margin-right: -12px;
+      border-radius: 6px;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background: var(--semi-color-fill-0);
+      }
+
+      &:focus {
+        outline: 2px solid var(--semi-color-primary);
+        outline-offset: 2px;
+      }
+    }
   }
 
   &__header {

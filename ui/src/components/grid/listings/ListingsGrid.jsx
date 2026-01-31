@@ -19,7 +19,7 @@ import {
   Select,
   Popover,
   Empty,
-} from '@douyinfe/semi-ui';
+} from '@douyinfe/semi-ui-19';
 import {
   IconBriefcase,
   IconCart,
@@ -33,6 +33,7 @@ import {
   IconFilter,
   IconHistory,
   IconInfoCircle,
+  IconActivity,
 } from '@douyinfe/semi-icons';
 import no_image from '../../../assets/no_image.jpg';
 import * as timeService from '../../../services/time/timeService.js';
@@ -46,6 +47,31 @@ import ListingDetailModal from '../../listings/ListingDetailModal.jsx';
 
 const { Text } = Typography;
 
+/**
+ * Format address with district if available from change_set
+ */
+const formatAddress = (item) => {
+  // Extract district from change_set
+  let district = null;
+  if (item.change_set) {
+    try {
+      const cs = typeof item.change_set === 'string' ? JSON.parse(item.change_set) : item.change_set;
+      district = cs.district || null;
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }
+
+  const address = item.address || '';
+
+  // If district exists and is not already part of the address, prepend it
+  if (district && !address.includes(district)) {
+    return `${district}, ${address}`;
+  }
+
+  return address || 'No address provided';
+};
+
 const ListingsGrid = () => {
   const listingsData = useSelector((state) => state.listingsData);
   const providers = useSelector((state) => state.provider);
@@ -55,7 +81,7 @@ const ListingsGrid = () => {
   const [page, setPage] = useState(1);
   const pageSize = 40;
 
-  const [sortField, setSortField] = useState('created_at');
+  const [sortField, setSortField] = useState('published_at');
   const [sortDir, setSortDir] = useState('desc');
   const [freeTextFilter, setFreeTextFilter] = useState(null);
   const [watchListFilter, setWatchListFilter] = useState(null);
@@ -117,17 +143,23 @@ const ListingsGrid = () => {
     setPage(_page);
   };
 
+  const cap = (val) => {
+    return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+  };
+
   return (
     <div className="listingsGrid">
       <div className="listingsGrid__searchbar">
         <Input prefix={<IconSearch />} showClear placeholder="Search" onChange={handleFilterChange} />
         <Popover content="Filter / Sort Results" style={{ color: 'white', padding: '.5rem' }}>
-          <Button
-            icon={<IconFilter />}
-            onClick={() => {
-              setShowFilterBar(!showFilterBar);
-            }}
-          />
+          <div>
+            <Button
+              icon={<IconFilter />}
+              onClick={() => {
+                setShowFilterBar(!showFilterBar);
+              }}
+            />
+          </div>
         </Popover>
       </div>
       {showFilterBar && (
@@ -199,7 +231,8 @@ const ListingsGrid = () => {
                   onChange={(val) => setSortField(val)}
                 >
                   <Select.Option value="job_name">Job Name</Select.Option>
-                  <Select.Option value="created_at">Listing Date</Select.Option>
+                  <Select.Option value="published_at">Published Date</Select.Option>
+                  <Select.Option value="created_at">Found Date</Select.Option>
                   <Select.Option value="price">Price</Select.Option>
                   <Select.Option value="provider">Provider</Select.Option>
                 </Select>
@@ -263,11 +296,9 @@ const ListingsGrid = () => {
               bodyStyle={{ padding: '12px' }}
             >
               <div className="listingsGrid__content">
-                <a href={item.url} target="_blank" rel="noopener noreferrer" className="listingsGrid__titleLink">
-                  <Text strong ellipsis={{ showTooltip: true }} className="listingsGrid__title">
-                    {item.title}
-                  </Text>
-                </a>
+                <Text strong ellipsis={{ showTooltip: true }} className="listingsGrid__title">
+                  {cap(item.title)}
+                </Text>
                 <Space vertical align="start" spacing={2} style={{ width: '100%', marginTop: 8 }}>
                   <Text type="secondary" icon={<IconCart />} size="small">
                     {item.price} €
@@ -279,27 +310,34 @@ const ListingsGrid = () => {
                     ellipsis={{ showTooltip: true }}
                     style={{ width: '100%' }}
                   >
-                    {item.address || 'No address provided'}
+                    {formatAddress(item)}
                   </Text>
                   <Text type="tertiary" size="small" icon={<IconClock />}>
-                    {timeService.format(item.created_at, false)}
+                    {item.published_at
+                      ? `Published: ${timeService.format(item.published_at, false)}`
+                      : `Found: ${timeService.format(item.created_at, false)}`}
                   </Text>
                   <Text type="tertiary" size="small" icon={<IconBriefcase />}>
                     {item.provider.charAt(0).toUpperCase() + item.provider.slice(1)}
                   </Text>
+                  {item.distance_to_destination ? (
+                    <Text type="tertiary" size="small" icon={<IconActivity />}>
+                      {item.distance_to_destination} m to chosen address
+                    </Text>
+                  ) : (
+                    <Text type="tertiary" size="small" icon={<IconActivity />}>
+                      Distance cannot be calculated, provide an address
+                    </Text>
+                  )}
                 </Space>
                 <Divider margin=".6rem" />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Space>
-                    <Button
-                      title="Link to listing"
-                      type="primary"
-                      size="small"
-                      onClick={async () => {
-                        window.open(item.link);
-                      }}
-                      icon={<IconLink />}
-                    />
+                    <div className="listingsGrid__linkButton">
+                      <a href={item.link} target="_blank" rel="noopener noreferrer">
+                        <IconLink />
+                      </a>
+                    </div>
                     <Button
                       title="View Details"
                       size="small"
