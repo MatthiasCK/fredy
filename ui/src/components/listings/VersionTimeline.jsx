@@ -12,7 +12,7 @@ import './VersionTimeline.less';
 
 const { Text } = Typography;
 
-const VersionTimeline = ({ versions, currentId }) => {
+const VersionTimeline = ({ versions, currentId, onVersionClick }) => {
   if (!versions || versions.length === 0) {
     return <Text type="tertiary">No version history available</Text>;
   }
@@ -49,8 +49,12 @@ const VersionTimeline = ({ versions, currentId }) => {
     return Math.round((end - start) / 86400000);
   };
 
-  // Sort versions by created_at descending (newest first)
-  const sortedVersions = [...versions].sort((a, b) => b.created_at - a.created_at);
+  // Sort versions by published_at (or created_at as fallback) descending (newest first)
+  const sortedVersions = [...versions].sort((a, b) => {
+    const dateA = a.published_at || a.created_at;
+    const dateB = b.published_at || b.created_at;
+    return dateB - dateA;
+  });
 
   return (
     <div className="versionTimeline">
@@ -62,6 +66,12 @@ const VersionTimeline = ({ versions, currentId }) => {
           const duration = computeDuration(version);
           const displayDate = version.published_at || version.created_at;
 
+          const handleClick = () => {
+            if (onVersionClick && !isCurrentVersion) {
+              onVersionClick(version.id);
+            }
+          };
+
           return (
             <Timeline.Item
               key={version.id}
@@ -69,7 +79,17 @@ const VersionTimeline = ({ versions, currentId }) => {
               type={isCurrentVersion ? 'ongoing' : 'default'}
               className={isCurrentVersion ? 'versionTimeline__current' : ''}
             >
-              <div className="versionTimeline__item">
+              <div
+                className={`versionTimeline__item${!isCurrentVersion && onVersionClick ? ' versionTimeline__item--clickable' : ''}`}
+                onClick={handleClick}
+                role={!isCurrentVersion && onVersionClick ? 'button' : undefined}
+                tabIndex={!isCurrentVersion && onVersionClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleClick();
+                  }
+                }}
+              >
                 <div className="versionTimeline__header">
                   <Space>
                     <Text strong>{formatPrice(version.price)}</Text>
@@ -90,6 +110,11 @@ const VersionTimeline = ({ versions, currentId }) => {
                     {version.is_active === 0 && (
                       <Tag color="red" size="small">
                         Inactive
+                      </Tag>
+                    )}
+                    {!isCurrentVersion && onVersionClick && (
+                      <Tag color="grey" size="small">
+                        Click to view
                       </Tag>
                     )}
                   </Space>

@@ -53,16 +53,30 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
   const [previewVisible, setPreviewVisible] = useState(false);
   const thumbnailRowRef = useRef(null);
 
+  // Track the currently viewed version vs the original listing
+  const [currentViewId, setCurrentViewId] = useState(null);
+  const isViewingHistoricalVersion = currentViewId && currentViewId !== listingId;
+
   useEffect(() => {
     if (visible && listingId) {
-      loadListingDetails();
+      setCurrentViewId(listingId);
+      loadListingDetails(listingId);
       loadVersionHistory();
     } else {
       setListing(null);
       setVersions([]);
       setHeroIndex(0);
+      setCurrentViewId(null);
     }
   }, [visible, listingId]);
+
+  // Load details when switching to a different version
+  useEffect(() => {
+    if (currentViewId && currentViewId !== listing?.id) {
+      loadListingDetails(currentViewId);
+      setHeroIndex(0);
+    }
+  }, [currentViewId]);
 
   // Keyboard arrow navigation (works in both gallery and fullscreen lightbox)
   useEffect(() => {
@@ -101,16 +115,24 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
     row.scrollBy({ left: direction * 240, behavior: 'smooth' });
   }, []);
 
-  const loadListingDetails = async () => {
+  const loadListingDetails = async (id) => {
     setLoading(true);
     try {
-      const response = await xhrGet(`/api/listings/details/${listingId}`);
+      const response = await xhrGet(`/api/listings/details/${id}`);
       setListing(response.json);
     } catch (error) {
       console.error('Failed to load listing details:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleVersionClick = (versionId) => {
+    setCurrentViewId(versionId);
+  };
+
+  const handleBackToLatest = () => {
+    setCurrentViewId(listingId);
   };
 
   const loadVersionHistory = async () => {
@@ -595,8 +617,20 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
             ) : (
               versions.length > 0 && (
                 <div className="listingDetail__versions">
-                  <Text strong>Listing History</Text>
-                  <VersionTimeline versions={versions} currentId={listingId} />
+                  <Space style={{ marginBottom: 8 }}>
+                    <Text strong>Listing History</Text>
+                    {isViewingHistoricalVersion && (
+                      <Button size="small" theme="light" onClick={handleBackToLatest}>
+                        Back to Latest Version
+                      </Button>
+                    )}
+                  </Space>
+                  {isViewingHistoricalVersion && (
+                    <div style={{ marginBottom: 12 }}>
+                      <Tag color="orange">Viewing historical version</Tag>
+                    </div>
+                  )}
+                  <VersionTimeline versions={versions} currentId={currentViewId} onVersionClick={handleVersionClick} />
                 </div>
               )
             )}
