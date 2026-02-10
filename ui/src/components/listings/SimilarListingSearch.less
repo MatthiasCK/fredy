@@ -1,0 +1,45 @@
+/*
+ * Copyright (c) 2026 by Christian Kellner.
+ * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
+ */
+
+.similarListingSearch {
+  &__current {
+    padding: 12px;
+    background: var(--semi-color-fill-0);
+    border-radius: 8px;
+  }
+
+  &__currentInfo {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+
+  &__filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 16px;
+  }
+
+  &__results {
+    min-height: 200px;
+  }
+}

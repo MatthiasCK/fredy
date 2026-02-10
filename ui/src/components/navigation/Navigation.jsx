@@ -37,6 +37,7 @@ export default function Navigation({ isAdmin }) {
       items: [
         { itemKey: '/listings', text: 'Overview' },
         { itemKey: '/map', text: 'Map View' },
+        { itemKey: '/deleted-listings', text: 'Deleted' },
       ],
     },
   ];

@@ -22,6 +22,7 @@ import TrackingModal from './components/tracking/TrackingModal.jsx';
 import { Banner, Divider } from '@douyinfe/semi-ui-19';
 import VersionBanner from './components/version/VersionBanner.jsx';
 import Listings from './views/listings/Listings.jsx';
+import DeletedListings from './views/listings/DeletedListings.jsx';
 import MapView from './views/listings/Map.jsx';
 import Navigation from './components/navigation/Navigation.jsx';
 import { Layout } from '@douyinfe/semi-ui-19';
@@ -96,6 +97,7 @@ export default function FredyApp() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/listings" element={<Listings />} />
+              <Route path="/deleted-listings" element={<DeletedListings />} />
               <Route path="/map" element={<MapView />} />
               <Route path="/watchlistManagement" element={<WatchlistManagement />} />
 

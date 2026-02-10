@@ -1,0 +1,146 @@
+/*
+ * Copyright (c) 2026 by Christian Kellner.
+ * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
+ */
+
+.similarityCard {
+  margin-bottom: 12px;
+  transition: border-color 0.2s;
+
+  &--linked {
+    border-color: var(--semi-color-success);
+    background-color: var(--semi-color-success-light-default);
+  }
+
+  &__content {
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+  }
+
+  &__image {
+    flex-shrink: 0;
+    width: 100px;
+    height: 80px;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  &__linkedBadge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--semi-color-success);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    margin: 0 !important;
+  }
+
+  &__score {
+    flex-shrink: 0;
+  }
+
+  &__address {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--semi-color-text-2);
+  }
+
+  &__meta {
+    margin: 4px 0;
+  }
+
+  &__props {
+    .semi-descriptions-item {
+      padding: 2px 0;
+    }
+  }
+
+  &__factors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  &__factor {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+
+    &--unavailable {
+      opacity: 0.5;
+    }
+  }
+
+  &__factorIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    font-size: 10px;
+
+    &--good {
+      background-color: var(--semi-color-success-light-default);
+      color: var(--semi-color-success);
+    }
+
+    &--medium {
+      background-color: var(--semi-color-warning-light-default);
+      color: var(--semi-color-warning);
+    }
+
+    &--poor {
+      background-color: var(--semi-color-danger-light-default);
+      color: var(--semi-color-danger);
+    }
+  }
+
+  &__recommendation {
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--semi-color-border);
+  }
+}

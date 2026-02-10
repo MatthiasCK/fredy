@@ -24,26 +24,20 @@ import {
   IconBriefcase,
   IconCart,
   IconClock,
-  IconDelete,
   IconLink,
   IconMapPin,
-  IconStar,
-  IconStarStroked,
   IconSearch,
   IconFilter,
-  IconHistory,
-  IconInfoCircle,
-  IconActivity,
+  IconRefresh,
 } from '@douyinfe/semi-icons';
 import no_image from '../../../assets/no_image.jpg';
 import * as timeService from '../../../services/time/timeService.js';
-import { xhrDelete, xhrPost } from '../../../services/xhr.js';
+import { xhrPost } from '../../../services/xhr.js';
 import { useActions, useSelector } from '../../../services/state/store.js';
 import debounce from 'lodash/debounce';
 
-import './ListingsGrid.less';
+import './DeletedListingsGrid.less';
 import { IllustrationNoResult, IllustrationNoResultDark } from '@douyinfe/semi-illustrations';
-import ListingDetailModal from '../../listings/ListingDetailModal.jsx';
 
 const { Text } = Typography;
 
@@ -51,7 +45,6 @@ const { Text } = Typography;
  * Format address with district if available from change_set
  */
 const formatAddress = (item) => {
-  // Extract district from change_set
   let district = null;
   if (item.change_set) {
     try {
@@ -64,7 +57,6 @@ const formatAddress = (item) => {
 
   const address = item.address || '';
 
-  // If district exists and is not already part of the address, prepend it
   if (district && !address.includes(district)) {
     return `${district}, ${address}`;
   }
@@ -72,8 +64,8 @@ const formatAddress = (item) => {
   return address || 'No address provided';
 };
 
-const ListingsGrid = () => {
-  const listingsData = useSelector((state) => state.listingsData);
+const DeletedListingsGrid = () => {
+  const deletedListingsData = useSelector((state) => state.deletedListingsData);
   const providers = useSelector((state) => state.provider);
   const jobs = useSelector((state) => state.jobsData.jobs);
   const actions = useActions();
@@ -84,63 +76,46 @@ const ListingsGrid = () => {
   const [sortField, setSortField] = useState('published_at');
   const [sortDir, setSortDir] = useState('desc');
   const [freeTextFilter, setFreeTextFilter] = useState(null);
-  const [watchListFilter, setWatchListFilter] = useState(null);
   const [jobNameFilter, setJobNameFilter] = useState(null);
-  const [activityFilter, setActivityFilter] = useState(null);
   const [providerFilter, setProviderFilter] = useState(null);
   const [showFilterBar, setShowFilterBar] = useState(false);
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [selectedListingId, setSelectedListingId] = useState(null);
-
-  const handleOpenDetail = (listingId) => {
-    setSelectedListingId(listingId);
-    setDetailModalVisible(true);
-  };
-
-  const handleCloseDetail = () => {
-    setDetailModalVisible(false);
-    setSelectedListingId(null);
-  };
 
   const loadData = () => {
-    actions.listingsData.getListingsData({
+    actions.deletedListingsData.getDeletedListingsData({
       page,
       pageSize,
       sortfield: sortField,
       sortdir: sortDir,
       freeTextFilter,
-      filter: { watchListFilter, jobNameFilter, activityFilter, providerFilter },
+      filter: { jobNameFilter, providerFilter },
     });
   };
 
   useEffect(() => {
     loadData();
-  }, [page, sortField, sortDir, freeTextFilter, providerFilter, activityFilter, jobNameFilter, watchListFilter]);
+  }, [page, sortField, sortDir, freeTextFilter, providerFilter, jobNameFilter]);
 
   const handleFilterChange = useMemo(() => debounce((value) => setFreeTextFilter(value), 500), []);
 
   useEffect(() => {
     return () => {
-      // cleanup debounced handler to avoid memory leaks
       handleFilterChange.cancel && handleFilterChange.cancel();
     };
   }, [handleFilterChange]);
 
-  const handleWatch = async (e, item) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handlePageChange = (_page) => {
+    setPage(_page);
+  };
+
+  const handleRestore = async (item) => {
     try {
-      await xhrPost('/api/listings/watch', { listingId: item.id });
-      Toast.success(item.isWatched === 1 ? 'Listing removed from Watchlist' : 'Listing added to Watchlist');
+      await xhrPost('/api/listings/restore', { ids: [item.id] });
+      Toast.success('Listing restored successfully');
       loadData();
     } catch (e) {
       console.error(e);
-      Toast.error('Failed to operate Watchlist');
+      Toast.error('Failed to restore listing');
     }
-  };
-
-  const handlePageChange = (_page) => {
-    setPage(_page);
   };
 
   const cap = (val) => {
@@ -148,8 +123,8 @@ const ListingsGrid = () => {
   };
 
   return (
-    <div className="listingsGrid">
-      <div className="listingsGrid__searchbar">
+    <div className="deletedListingsGrid">
+      <div className="deletedListingsGrid__searchbar">
         <Input prefix={<IconSearch />} showClear placeholder="Search" onChange={handleFilterChange} />
         <Popover content="Filter / Sort Results" style={{ color: 'white', padding: '.5rem' }}>
           <div>
@@ -163,33 +138,13 @@ const ListingsGrid = () => {
         </Popover>
       </div>
       {showFilterBar && (
-        <div className="listingsGrid__toolbar">
+        <div className="deletedListingsGrid__toolbar">
           <Space wrap style={{ marginBottom: '1rem' }}>
-            <div className="listingsGrid__toolbar__card">
+            <div className="deletedListingsGrid__toolbar__card">
               <div>
                 <Text strong>Filter by:</Text>
               </div>
               <div style={{ display: 'flex', gap: '.3rem' }}>
-                <Select
-                  placeholder="Status"
-                  showClear
-                  onChange={(val) => setActivityFilter(val)}
-                  value={activityFilter}
-                >
-                  <Select.Option value={true}>Active</Select.Option>
-                  <Select.Option value={false}>Not Active</Select.Option>
-                </Select>
-
-                <Select
-                  placeholder="Watchlist"
-                  showClear
-                  onChange={(val) => setWatchListFilter(val)}
-                  value={watchListFilter}
-                >
-                  <Select.Option value={true}>Watched</Select.Option>
-                  <Select.Option value={false}>Not Watched</Select.Option>
-                </Select>
-
                 <Select
                   placeholder="Provider"
                   showClear
@@ -219,7 +174,7 @@ const ListingsGrid = () => {
             </div>
             <Divider layout="vertical" />
 
-            <div className="listingsGrid__toolbar__card">
+            <div className="deletedListingsGrid__toolbar__card">
               <div>
                 <Text strong>Sort by:</Text>
               </div>
@@ -252,21 +207,21 @@ const ListingsGrid = () => {
         </div>
       )}
 
-      {(listingsData?.result || []).length === 0 && (
+      {(deletedListingsData?.result || []).length === 0 && (
         <Empty
           image={<IllustrationNoResult />}
           darkModeImage={<IllustrationNoResultDark />}
-          description="No listings available yet..."
+          description="No deleted listings..."
         />
       )}
       <Row gutter={[16, 16]}>
-        {(listingsData?.result || []).map((item) => (
+        {(deletedListingsData?.result || []).map((item) => (
           <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4} xxl={6}>
             <Card
-              className={`listingsGrid__card ${!item.is_active ? 'listingsGrid__card--inactive' : ''}`}
+              className="deletedListingsGrid__card"
               cover={
                 <div style={{ position: 'relative' }}>
-                  <div className="listingsGrid__imageContainer">
+                  <div className="deletedListingsGrid__imageContainer">
                     <Image
                       src={item.image_url || no_image}
                       fallback={no_image}
@@ -275,28 +230,14 @@ const ListingsGrid = () => {
                       style={{ objectFit: 'cover' }}
                       preview={false}
                     />
-                    <Button
-                      icon={
-                        item.isWatched === 1 ? (
-                          <IconStar style={{ color: 'rgba(var(--semi-green-5), 1)' }} />
-                        ) : (
-                          <IconStarStroked />
-                        )
-                      }
-                      theme="light"
-                      shape="circle"
-                      size="small"
-                      className="listingsGrid__watchButton"
-                      onClick={(e) => handleWatch(e, item)}
-                    />
                   </div>
-                  {!item.is_active && <div className="listingsGrid__inactiveOverlay">Inactive</div>}
+                  <div className="deletedListingsGrid__deletedOverlay">Deleted</div>
                 </div>
               }
               bodyStyle={{ padding: '12px' }}
             >
-              <div className="listingsGrid__content">
-                <Text strong ellipsis={{ showTooltip: true }} className="listingsGrid__title">
+              <div className="deletedListingsGrid__content">
+                <Text strong ellipsis={{ showTooltip: true }} className="deletedListingsGrid__title">
                   {cap(item.title)}
                 </Text>
                 <Space vertical align="start" spacing={2} style={{ width: '100%', marginTop: 8 }}>
@@ -320,80 +261,42 @@ const ListingsGrid = () => {
                   <Text type="tertiary" size="small" icon={<IconBriefcase />}>
                     {item.provider.charAt(0).toUpperCase() + item.provider.slice(1)}
                   </Text>
-                  {item.distance_to_destination ? (
-                    <Text type="tertiary" size="small" icon={<IconActivity />}>
-                      {item.distance_to_destination} m to chosen address
-                    </Text>
-                  ) : (
-                    <Text type="tertiary" size="small" icon={<IconActivity />}>
-                      Distance cannot be calculated, provide an address
-                    </Text>
-                  )}
                 </Space>
                 <Divider margin=".6rem" />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Space>
-                    <div className="listingsGrid__linkButton">
-                      <a href={item.link} target="_blank" rel="noopener noreferrer">
-                        <IconLink />
-                      </a>
-                    </div>
-                    <Button
-                      title="View Details"
-                      size="small"
-                      onClick={() => handleOpenDetail(item.id)}
-                      icon={<IconInfoCircle />}
-                    />
-                  </Space>
-
-                  <Space>
-                    {(item.has_version_history || item.previous_version_id) && (
-                      <Popover content="This listing has price history" style={{ padding: '.5rem' }}>
-                        <IconHistory style={{ color: 'var(--semi-color-warning)' }} />
-                      </Popover>
-                    )}
-                    <Button
-                      title="Remove"
-                      type="danger"
-                      size="small"
-                      onClick={async () => {
-                        try {
-                          await xhrDelete('/api/listings/', { ids: [item.id] });
-                          Toast.success('Listing(s) successfully removed');
-                          loadData();
-                        } catch (error) {
-                          Toast.error(error);
-                        }
-                      }}
-                      icon={<IconDelete />}
-                    />
-                  </Space>
+                  <div className="deletedListingsGrid__linkButton">
+                    <a href={item.link} target="_blank" rel="noopener noreferrer">
+                      <IconLink />
+                    </a>
+                  </div>
+                  <Button
+                    title="Restore"
+                    type="primary"
+                    size="small"
+                    onClick={() => handleRestore(item)}
+                    icon={<IconRefresh />}
+                  >
+                    Restore
+                  </Button>
                 </div>
               </div>
             </Card>
           </Col>
         ))}
       </Row>
-      {(listingsData?.result || []).length > 0 && (
-        <div className="listingsGrid__pagination">
+      {(deletedListingsData?.result || []).length > 0 && (
+        <div className="deletedListingsGrid__pagination">
           <Pagination
             currentPage={page}
             pageSize={pageSize}
-            total={listingsData?.totalNumber || 0}
+            total={deletedListingsData?.totalNumber || 0}
             onPageChange={handlePageChange}
             showSizeChanger={false}
           />
         </div>
       )}
-
-      <ListingDetailModal
-        visible={detailModalVisible}
-        listingId={selectedListingId}
-        onClose={handleCloseDetail}
-        onDataChange={loadData}
-      />
     </div>
   );
 };
 
-export default ListingsGrid;
+export default DeletedListingsGrid;

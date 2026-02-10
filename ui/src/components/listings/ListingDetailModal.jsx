@@ -15,11 +15,21 @@ import {
   Spin,
   Empty,
   Button,
+  List,
 } from '@douyinfe/semi-ui';
-import { IconMapPin, IconLink, IconHistory, IconStar, IconChevronLeft, IconChevronRight } from '@douyinfe/semi-icons';
-import { xhrGet } from '../../services/xhr.js';
+import {
+  IconMapPin,
+  IconLink,
+  IconHistory,
+  IconStar,
+  IconChevronLeft,
+  IconChevronRight,
+  IconSearch,
+} from '@douyinfe/semi-icons';
+import { xhrGet, xhrDelete } from '../../services/xhr.js';
 import * as timeService from '../../services/time/timeService.js';
 import VersionTimeline from './VersionTimeline.jsx';
+import SimilarListingSearch from './SimilarListingSearch.jsx';
 import no_image from '../../assets/no_image.jpg';
 
 import './ListingDetailModal.less';
@@ -44,7 +54,7 @@ const formatAddress = (listing) => {
   return address || 'No address provided';
 };
 
-const ListingDetailModal = ({ visible, listingId, onClose }) => {
+const ListingDetailModal = ({ visible, listingId, onClose, onDataChange }) => {
   const [loading, setLoading] = useState(false);
   const [listing, setListing] = useState(null);
   const [versions, setVersions] = useState([]);
@@ -52,6 +62,7 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
   const [heroIndex, setHeroIndex] = useState(0);
   const [previewVisible, setPreviewVisible] = useState(false);
   const thumbnailRowRef = useRef(null);
+  const [similarSearchVisible, setSimilarSearchVisible] = useState(false);
 
   // Track the currently viewed version vs the original listing
   const [currentViewId, setCurrentViewId] = useState(null);
@@ -145,6 +156,48 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
     } finally {
       setVersionsLoading(false);
     }
+  };
+
+  const handleUnlinkManualFromTimeline = async (versionId) => {
+    try {
+      const response = await xhrDelete('/api/similarity/link', {
+        listingId: listingId,
+        linkedListingId: versionId,
+      });
+
+      if (response.json?.success) {
+        // Reload listing details and version history
+        loadListingDetails(currentViewId || listingId);
+        loadVersionHistory();
+      }
+    } catch (error) {
+      console.error('Failed to unlink manual link from timeline:', error);
+    }
+  };
+
+  const handleUnlinkAutoFromTimeline = async (versionId) => {
+    try {
+      const response = await xhrDelete('/api/listings/version-link', {
+        listingId: listingId,
+        linkedListingId: versionId,
+      });
+
+      if (response.json?.success) {
+        // Reload listing details and version history
+        loadListingDetails(currentViewId || listingId);
+        loadVersionHistory();
+      }
+    } catch (error) {
+      console.error('Failed to unlink auto version from timeline:', error);
+    }
+  };
+
+  const handleLinkChange = () => {
+    // Reload listing details and version history when a link changes
+    loadListingDetails(currentViewId || listingId);
+    loadVersionHistory();
+    // Notify parent that data changed (for grid refresh)
+    onDataChange && onDataChange();
   };
 
   const formatPrice = (price) => {
@@ -510,7 +563,7 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
                       : 'Inactive'}
                   </Tag>
                 )}
-                {listing.previous_version_id && (
+                {(listing.previous_version_id || versions.length > 1) && (
                   <Tag color="orange" icon={<IconHistory />}>
                     Has History
                   </Tag>
@@ -609,6 +662,15 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
 
             <Divider margin={16} />
 
+            {/* Find Same Property Button */}
+            <div className="listingDetail__findSame">
+              <Button size="small" theme="light" icon={<IconSearch />} onClick={() => setSimilarSearchVisible(true)}>
+                Find Same Property
+              </Button>
+            </div>
+
+            <Divider margin={16} />
+
             {/* Version History */}
             {versionsLoading ? (
               <div style={{ textAlign: 'center', padding: 16 }}>
@@ -630,7 +692,14 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
                       <Tag color="orange">Viewing historical version</Tag>
                     </div>
                   )}
-                  <VersionTimeline versions={versions} currentId={currentViewId} onVersionClick={handleVersionClick} />
+                  <VersionTimeline
+                    versions={versions}
+                    currentId={currentViewId}
+                    onVersionClick={handleVersionClick}
+                    onUnlinkManual={handleUnlinkManualFromTimeline}
+                    onUnlinkAuto={handleUnlinkAutoFromTimeline}
+                    currentListingId={listingId}
+                  />
                 </div>
               )
             )}
@@ -646,6 +715,15 @@ const ListingDetailModal = ({ visible, listingId, onClose }) => {
           </div>
         </div>
       )}
+
+      {/* Similar Listing Search Modal */}
+      <SimilarListingSearch
+        visible={similarSearchVisible}
+        listingId={listingId}
+        listing={listing}
+        onClose={() => setSimilarSearchVisible(false)}
+        onLinkChange={handleLinkChange}
+      />
     </Modal>
   );
 };

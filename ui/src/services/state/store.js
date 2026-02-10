@@ -218,6 +218,34 @@ export const useFredyState = create(
             }
           },
         },
+        deletedListingsData: {
+          async getDeletedListingsData({
+            page = 1,
+            pageSize = 20,
+            freeTextFilter = null,
+            sortfield = null,
+            sortdir = 'asc',
+            filter,
+          } = {}) {
+            try {
+              const qryString = queryString.stringify({
+                page,
+                pageSize,
+                freeTextFilter,
+                sortfield,
+                sortdir,
+                deletedFilter: true,
+                ...filter,
+              });
+              const response = await xhrGet(`/api/listings/table?${qryString}`);
+              set((state) => ({
+                deletedListingsData: { ...state.deletedListingsData, ...response.json },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/listings (deleted). Error:', Exception);
+            }
+          },
+        },
         userSettings: {
           async getUserSettings() {
             try {
@@ -240,6 +268,11 @@ export const useFredyState = create(
           result: [],
           mapListings: [],
           maxPrice: 0,
+        },
+        deletedListingsData: {
+          totalNumber: 0,
+          page: 1,
+          result: [],
         },
         generalSettings: { settings: {} },
         userSettings: { settings: {} },
@@ -264,6 +297,7 @@ export const useFredyState = create(
         demoMode: { ...effects.demoMode },
         versionUpdate: { ...effects.versionUpdate },
         listingsData: { ...effects.listingsData },
+        deletedListingsData: { ...effects.deletedListingsData },
         provider: { ...effects.provider },
         jobsData: { ...effects.jobsData },
         user: { ...effects.user },

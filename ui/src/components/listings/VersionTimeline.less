@@ -16,8 +16,15 @@
     }
   }
 
+  &__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
   &__item {
     padding: 4px 0;
+    flex: 1;
 
     &--clickable {
       cursor: pointer;
@@ -38,8 +45,17 @@
     }
   }
 
+  &__actions {
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+
   &__header {
+    display: flex;
+    align-items: center;
     margin-bottom: 4px;
+    flex-wrap: wrap;
+    gap: 4px;
   }
 
   &__details {
