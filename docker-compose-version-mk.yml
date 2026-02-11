@@ -8,8 +8,8 @@ services:
     environment:
       - NODE_ENV=production
     volumes:
-      - ./conf:/conf
-      - ./db:/db
+      - /opt/fredy/conf:/conf
+      - /opt/fredy/db:/db
     ports:
       - "9998:9998"
     restart: unless-stopped
