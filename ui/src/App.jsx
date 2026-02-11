@@ -60,7 +60,7 @@ export default function FredyApp() {
   };
 
   const isAdmin = () => currentUser != null && currentUser.isAdmin;
-  const { Footer, Sider, Content } = Layout;
+  const { Sider, Content } = Layout;
 
   return loading ? null : needsLogin() ? (
     <Routes>
@@ -69,11 +69,11 @@ export default function FredyApp() {
     </Routes>
   ) : (
     <Layout className="app">
-      <Layout className="app">
-        <Sider>
-          <Navigation isAdmin={isAdmin()} />
-        </Sider>
-        <Content>
+      <Sider>
+        <Navigation isAdmin={isAdmin()} />
+      </Sider>
+      <Layout className="app__main">
+        <Content className="app__content">
           {versionUpdate?.newVersion && <VersionBanner />}
           {settings.demoMode && (
             <>
@@ -98,6 +98,7 @@ export default function FredyApp() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/listings" element={<Listings />} />
               <Route path="/deleted-listings" element={<DeletedListings />} />
+
               <Route path="/map" element={<MapView />} />
               <Route path="/watchlistManagement" element={<WatchlistManagement />} />
 
@@ -126,14 +127,7 @@ export default function FredyApp() {
                   </PermissionAwareRoute>
                 }
               />
-              <Route
-                path="/userSettings"
-                element={
-                  <PermissionAwareRoute currentUser={currentUser} adminOnly={false}>
-                    <UserSettings />
-                  </PermissionAwareRoute>
-                }
-              />
+              <Route path="/userSettings" element={<UserSettings />} />
               <Route
                 path="/generalSettings"
                 element={
@@ -147,10 +141,8 @@ export default function FredyApp() {
             </Routes>
           </div>
         </Content>
-      </Layout>
-      <Footer>
         <FredyFooter />
-      </Footer>
+      </Layout>
     </Layout>
   );
 }

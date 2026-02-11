@@ -35,6 +35,8 @@ import {
   IconInfoCircle,
   IconActivity,
 } from '@douyinfe/semi-icons';
+
+import ListingDeletionModal from '../../ListingDeletionModal.jsx';
 import no_image from '../../../assets/no_image.jpg';
 import * as timeService from '../../../services/time/timeService.js';
 import { xhrDelete, xhrPost } from '../../../services/xhr.js';
@@ -102,6 +104,9 @@ const ListingsGrid = () => {
     setSelectedListingId(null);
   };
 
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [listingToDelete, setListingToDelete] = useState(null);
+
   const loadData = () => {
     actions.listingsData.getListingsData({
       page,
@@ -141,6 +146,19 @@ const ListingsGrid = () => {
 
   const handlePageChange = (_page) => {
     setPage(_page);
+  };
+
+  const confirmDeletion = async (hardDelete) => {
+    try {
+      await xhrDelete('/api/listings/', { ids: [listingToDelete], hardDelete });
+      Toast.success('Listing successfully removed');
+      loadData();
+    } catch (error) {
+      Toast.error(error.message || 'Error deleting listing');
+    } finally {
+      setDeleteModalVisible(false);
+      setListingToDelete(null);
+    }
   };
 
   const cap = (val) => {
@@ -264,6 +282,8 @@ const ListingsGrid = () => {
           <Col key={item.id} xs={24} sm={12} md={8} lg={6} xl={4} xxl={6}>
             <Card
               className={`listingsGrid__card ${!item.is_active ? 'listingsGrid__card--inactive' : ''}`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleOpenDetail(item.id)}
               cover={
                 <div style={{ position: 'relative' }}>
                   <div className="listingsGrid__imageContainer">
@@ -332,19 +352,11 @@ const ListingsGrid = () => {
                 </Space>
                 <Divider margin=".6rem" />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Space>
-                    <div className="listingsGrid__linkButton">
-                      <a href={item.link} target="_blank" rel="noopener noreferrer">
-                        <IconLink />
-                      </a>
-                    </div>
-                    <Button
-                      title="View Details"
-                      size="small"
-                      onClick={() => handleOpenDetail(item.id)}
-                      icon={<IconInfoCircle />}
-                    />
-                  </Space>
+                  <div className="listingsGrid__linkButton" onClick={(e) => e.stopPropagation()}>
+                    <a href={item.link} target="_blank" rel="noopener noreferrer">
+                      <IconLink />
+                    </a>
+                  </div>
 
                   <Space>
                     {(item.has_version_history || item.previous_version_id) && (
@@ -352,18 +364,26 @@ const ListingsGrid = () => {
                         <IconHistory style={{ color: 'var(--semi-color-warning)' }} />
                       </Popover>
                     )}
+
+                    <Button
+                      type="secondary"
+                      size="small"
+                      title="View Details"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenDetail(item.id);
+                      }}
+                      icon={<IconInfoCircle />}
+                    />
+
                     <Button
                       title="Remove"
                       type="danger"
                       size="small"
-                      onClick={async () => {
-                        try {
-                          await xhrDelete('/api/listings/', { ids: [item.id] });
-                          Toast.success('Listing(s) successfully removed');
-                          loadData();
-                        } catch (error) {
-                          Toast.error(error);
-                        }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setListingToDelete(item.id);
+                        setDeleteModalVisible(true);
                       }}
                       icon={<IconDelete />}
                     />
@@ -391,6 +411,14 @@ const ListingsGrid = () => {
         listingId={selectedListingId}
         onClose={handleCloseDetail}
         onDataChange={loadData}
+      />
+      <ListingDeletionModal
+        visible={deleteModalVisible}
+        onConfirm={confirmDeletion}
+        onCancel={() => {
+          setDeleteModalVisible(false);
+          setListingToDelete(null);
+        }}
       />
     </div>
   );
